@@ -1,4 +1,4 @@
-package net.projects.task;
+package net.druidlabs.todo.task;
 
 import javax.swing.*;
 import java.awt.event.ActionListener;
@@ -7,9 +7,9 @@ import java.io.*;
 import java.util.List;
 import java.util.Map;
 
-import static net.projects.res.values.Colours.BG_COLOUR;
-import static net.projects.res.values.Colours.TEXT_COLOUR;
-import static net.projects.res.values.Fonts.DEFAULT_FONT;
+import static net.druidlabs.todo.res.values.Colours.BG_COLOUR;
+import static net.druidlabs.todo.res.values.Colours.TEXT_COLOUR;
+import static net.druidlabs.todo.res.values.Fonts.DEFAULT_FONT;
 
 public abstract class TaskManager {
 
@@ -21,9 +21,7 @@ public abstract class TaskManager {
 
         var saveFile = new File(FILE_PATH + FILENAME);
 
-        if (!saveFile.exists()) {
-            return false;
-        }
+        if (!saveFile.exists()) return false;
 
         try (FileWriter fileWriter = new FileWriter(saveFile);
              BufferedWriter writer = new BufferedWriter(fileWriter)) {
@@ -31,8 +29,6 @@ public abstract class TaskManager {
             for (JLabel task : itemMap.values()) {
                 writer.write(task.getText() + "\r\n");
             }
-
-            writer.flush();
         }
 
         return true;
@@ -49,16 +45,15 @@ public abstract class TaskManager {
 
         var saveFile = new File(FILE_PATH + FILENAME);
 
-        if (!saveFile.exists()) {
-            return false;
-        }
+        if (!saveFile.exists()) return false;
+
 
         try (FileReader fileReader = new FileReader(saveFile);
              BufferedReader reader = new BufferedReader(fileReader)) {
 
             String firstLine = reader.readLine();
 
-            if ((firstLine == null)  || firstLine.isBlank() || firstLine.isEmpty()) {
+            if ((firstLine == null) || firstLine.isBlank()) {
                 return false;
             } else {
                 readTaskFile(firstLine, prevItems, actionListener, mouseListener, itemMap, panel, frame);

@@ -1,4 +1,4 @@
-package net.projects.res.values;
+package net.druidlabs.todo.res.values;
 
 import java.awt.*;
 

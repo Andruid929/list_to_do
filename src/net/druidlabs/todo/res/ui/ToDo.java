@@ -1,8 +1,9 @@
-package net.projects.res.ui;
+package net.druidlabs.todo.res.ui;
 
-import net.projects.task.TaskManager;
-import net.projects.util.RefuseToBeEmptyException;
-import org.jetbrains.annotations.NotNull;
+import net.druidlabs.todo.listeners.TKeyListener;
+import net.druidlabs.todo.listeners.TMouseListener;
+import net.druidlabs.todo.task.TaskManager;
+import net.druidlabs.todo.util.RefuseToBeEmptyException;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
@@ -13,12 +14,15 @@ import java.util.List;
 import java.util.*;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER;
-import static net.projects.res.values.Colours.BG_COLOUR;
-import static net.projects.res.values.Colours.TEXT_COLOUR;
-import static net.projects.res.values.Dims.*;
-import static net.projects.res.values.Fonts.DEFAULT_FONT;
-import static net.projects.res.values.Strings.TITLE;
+import static net.druidlabs.todo.res.values.Colours.BG_COLOUR;
+import static net.druidlabs.todo.res.values.Colours.TEXT_COLOUR;
+import static net.druidlabs.todo.res.values.Dims.*;
+import static net.druidlabs.todo.res.values.Fonts.DEFAULT_FONT;
+import static net.druidlabs.todo.res.values.Strings.TITLE;
 
+/**
+ * Creates a To-do list window. Get an instance of the app by calling the static {@link #launch()}.
+ * */
 
 public class ToDo extends JFrame {
 
@@ -28,27 +32,30 @@ public class ToDo extends JFrame {
 
     private final List<JCheckBox> PREV_ITEMS = new ArrayList<>();
 
-    private final Component parentComponent = this;
+    private final MouseListener mouseListener = new TMouseListener(this);
 
-    public ToDo() {
+    private final ActionListener actionListener = this::setCompleted;
+
+    private ToDo() {
         this.setTitle(TITLE);
         this.setSize(SIZE);
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(EXIT_ON_CLOSE);
         this.setResizable(false);
 
-        this.addKeyListener(getKeyListener());
+        KeyListener keyListener = new TKeyListener(this);
+        this.addKeyListener(keyListener);
 
-        ImageIcon ICON = new ImageIcon(Objects.requireNonNull(this.getClass().getResource("/net/projects/res/icon/to_do_icon.png")));
+        ImageIcon ICON = new ImageIcon(Objects.requireNonNull(this.getClass().getResource("/net/druidlabs/todo/res/icon/to_do_icon.png")));
         this.setIconImage(ICON.getImage());
 
         try {
-            if (!TaskManager.read(PREV_ITEMS, getActionListener(), getMouseListener(), ITEM_MAP, panel, this)) {
+            if (!TaskManager.read(PREV_ITEMS, actionListener, mouseListener, ITEM_MAP, panel, this)) {
                 JCheckBox initialItem = new JCheckBox();
                 initialItem.setBounds(20, 17, 15, 15);
                 initialItem.setFocusable(false);
                 initialItem.setBackground(BG_COLOUR);
-                initialItem.addActionListener(getActionListener());
+                initialItem.addActionListener(actionListener);
                 panel.add(initialItem);
 
                 PREV_ITEMS.add(initialItem);
@@ -59,9 +66,11 @@ public class ToDo extends JFrame {
                 initialItemLabel.setFont(DEFAULT_FONT);
                 initialItemLabel.setForeground(TEXT_COLOUR);
                 initialItemLabel.setFocusable(false);
-                initialItemLabel.addMouseListener(getMouseListener());
+                initialItemLabel.addMouseListener(mouseListener);
                 panel.add(initialItemLabel);
+
                 ITEM_MAP.put(initialItem, initialItemLabel);
+
             }
         } catch (IOException | RefuseToBeEmptyException _) {
             System.err.println("No save files");
@@ -69,7 +78,7 @@ public class ToDo extends JFrame {
 
         panel.setBackground(BG_COLOUR);
         panel.setPreferredSize(PANEL_SIZE);
-        panel.addKeyListener(getKeyListener());
+        panel.addKeyListener(keyListener);
         panel.setFocusable(true);
 
         this.add(panel);
@@ -88,6 +97,14 @@ public class ToDo extends JFrame {
 
         this.setVisible(true);
 
+    }
+
+    /**
+     * Launches a new instance of the To-do list application.
+     * */
+
+    public static void launch() {
+        new ToDo();
     }
 
     private BasicScrollBarUI scrollBarUI() {
@@ -121,7 +138,7 @@ public class ToDo extends JFrame {
         };
     }
 
-    private void setCompleted(ActionEvent e) { //Called when a JCheckBox is checked
+    public void setCompleted(ActionEvent e) { //Called when a JCheckBox is checked
         JCheckBox item = (JCheckBox) e.getSource();
         JLabel itemLabel = ITEM_MAP.get(item);
 
@@ -132,10 +149,10 @@ public class ToDo extends JFrame {
         }
     }
 
-    private void addTask() { //Called when it's time to create a new task
+    public void addTask() { //Called when it's time to create a new task
         String taskName = JOptionPane.showInputDialog(this, "What's the task?", "Add a task", JOptionPane.PLAIN_MESSAGE);
 
-        if (!taskName.isEmpty() || !taskName.isBlank()) {
+        if (!taskName.isBlank()) {
             JCheckBox lastItem = PREV_ITEMS.getLast();
 
             int x = lastItem.getX();
@@ -145,7 +162,7 @@ public class ToDo extends JFrame {
             newItem.setBounds(x, y + 30, 15, 15);
             newItem.setFocusable(false);
             newItem.setBackground(BG_COLOUR);
-            newItem.addActionListener(getActionListener());
+            newItem.addActionListener(actionListener);
             panel.add(newItem);
 
             PREV_ITEMS.add(newItem);
@@ -155,7 +172,7 @@ public class ToDo extends JFrame {
             newItemLabel.setFocusable(false);
             newItemLabel.setFont(DEFAULT_FONT);
             newItemLabel.setForeground(TEXT_COLOUR);
-            newItemLabel.addMouseListener(getMouseListener());
+            newItemLabel.addMouseListener(mouseListener);
             panel.add(newItemLabel);
 
             ITEM_MAP.put(newItem, newItemLabel);
@@ -167,13 +184,14 @@ public class ToDo extends JFrame {
                 if (TaskManager.save(ITEM_MAP)) {
                     System.out.println("Save successful");
                 }
-            } catch (IOException _) {
+            } catch (IOException e) {
                 System.err.println("Encountered errors while saving");
+                e.printStackTrace(System.err);
             }
         }
     }
 
-    private void showTaskName(@NotNull MouseEvent e) {
+    public void showTaskName(MouseEvent e) {
         JLabel task = (JLabel) e.getSource();
 
         if (task.getForeground() == Color.DARK_GRAY) {
@@ -183,7 +201,7 @@ public class ToDo extends JFrame {
         JOptionPane.showMessageDialog(this, task.getText(), "Task name", JOptionPane.PLAIN_MESSAGE);
     }
 
-    private void deleteLastTask() throws RefuseToBeEmptyException {
+    public void deleteLastTask() throws RefuseToBeEmptyException {
         if (ITEM_MAP.size() == 1) {
             throw new RefuseToBeEmptyException("I assume there's one task remaining");
         }
@@ -191,7 +209,7 @@ public class ToDo extends JFrame {
         JCheckBox lastItem = PREV_ITEMS.getLast();
         JLabel lastLabel = ITEM_MAP.get(lastItem);
 
-        if (lastLabel == null || lastItem == null) {
+        if ((lastItem == null) || (lastLabel == null)) {
             System.err.println("It be null");
             lastItem = PREV_ITEMS.get(PREV_ITEMS.size() - 2);
             lastLabel = ITEM_MAP.get(lastItem);
@@ -215,25 +233,25 @@ public class ToDo extends JFrame {
         }
     }
 
-    private String changeTaskMessage(String message) {
-        if (message.length() > 30) {
-            return message.substring(0, 30).concat("...");
+    private String previewTaskName(String task) {
+        if (task.length() > 30) {
+            return task.substring(0, 30).concat("...");
         }
 
-        return message;
+        return task;
     }
 
-    private void editTask(MouseEvent e) { //Edit an existing task
+    public void editTask(MouseEvent e) { //Edit an existing task
         JLabel task = (JLabel) e.getSource();
 
-        String text = JOptionPane.showInputDialog(this, changeTaskMessage(task.getText()),
+        String text = JOptionPane.showInputDialog(this, previewTaskName(task.getText()),
                 "Edit task", JOptionPane.PLAIN_MESSAGE);
 
         if (text == null) {
             return;
         }
 
-        if (text.isBlank() || text.isEmpty()) {
+        if (text.isBlank()) {
             System.err.println("Blank rename, cancelling");
             return;
         }
@@ -246,69 +264,5 @@ public class ToDo extends JFrame {
         } catch (IOException _) {
             System.err.println("Encountered errors while saving");
         }
-    }
-
-    private ActionListener getActionListener() {
-        return this::setCompleted;
-    }
-
-    private KeyListener getKeyListener() {
-
-        return new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_INSERT) {
-                    addTask();
-                }
-
-                if (e.getKeyCode() == KeyEvent.VK_DELETE) {
-                    try {
-                        deleteLastTask();
-                    } catch (RefuseToBeEmptyException ex) {
-                        JOptionPane.showMessageDialog(parentComponent, "I refuse to be empty",
-                                "Warning", JOptionPane.ERROR_MESSAGE);
-                        ex.printStackTrace(System.err);
-                    }
-                }
-
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-            }
-        };
-    }
-
-    private MouseListener getMouseListener() {
-
-        return new MouseListener() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                showTaskName(e);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON3) {
-                    editTask(e);
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-            }
-        };
     }
 }
